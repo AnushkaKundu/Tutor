@@ -14,6 +14,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 
 
 const PieChart = (props: any) => {
+  const [uid, setUid] = useState("Mxj1jPA1sSNJcozS2oOsmDao3K83");
   const fullConfig = resolveConfig(tailwindConfig);
   const colors = fullConfig.theme.colors;
 
@@ -22,7 +23,6 @@ const PieChart = (props: any) => {
   const [skipped, setSkipped] = useState(0);
 
   const getAnswerStats = async (action: string) => {
-    const [uid, setUid] = useState("Mxj1jPA1sSNJcozS2oOsmDao3K83");
     const reference = ref(database, `/answerStats/${uid}/${action}`);
     const snapshot = await get(reference);
     if (snapshot.exists()) {
