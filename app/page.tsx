@@ -1,113 +1,252 @@
-import Image from "next/image";
+"use client"
+import { useState, useEffect } from 'react';
+import { Libre_Franklin } from 'next/font/google'
+import { UserAuth } from "./context/AuthContext.mjs";
+import './globals.css'
 
-export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+const libre_franklin = Libre_Franklin({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-libre_franklin',
+})
+
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import Link from "next/link"
+
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
+
+export default function Component() {
+  const [mode, setMode] = useState("login");
+  const [error, setError] = useState("");
+  const { googleSignIn, emailSignIn, emailSignUp } = UserAuth();
+  const handleGoogleSignIn = async () => {
+    try {
+      await googleSignIn();
+    } catch (error: any) {
+      setError(error.message);
+      console.error(error);
+    }
+  };
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const handleEmailSignIn = async (e: any) => {
+    e.preventDefault();
+    console.log(email, password);
+    try {
+      await emailSignIn(email, password);
+      // console.log(email, password);
+    } catch (error: any) {
+      setError(error.message);
+      // console.log(error);
+    }
+  };
+  const handleEmailSignUp = async (e: any) => {
+    e.preventDefault();
+    console.log(email, password);
+    await emailSignUp(email, password)
+    .then(() => console.log(email, password))
+    .catch((error: any) => {
+      setError(error.message);
+      console.log(error);
+    });
+  }
+  const AITutorTagline = () => {
+    const [tagline, setTagline] = useState('');
+    const fullTagline = 'Elevate Your Learning Experience, Tailored Just for You.';
+  
+    useEffect(() => {
+      let currentIndex = 0;
+      const interval = setInterval(() => {
+        setTagline(fullTagline.slice(0, currentIndex + 1));
+        currentIndex++;
+        if (currentIndex === fullTagline.length) {
+          clearInterval(interval);
+        }
+      }, 100);
+  
+      return () => clearInterval(interval);
+    }, [fullTagline]);
+  
+    return (
+      <div className="bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="font-extrabold text-white sm:text-5xl lg:text-6xl">
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+              AI Tutor
+            </span>
+            <span className="block font-normal text-gray-200 drop-shadow-2xl py-4 leading-relaxed text-4xl">{tagline}</span>
+          </h2>
         </div>
       </div>
-
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
+    );
+  };
+  
+  const DescribeError = (props: any) => {
+    const str = (props.error).replace("Firebase: Error (auth/", "").replace(").", "");
+    return (
+      <div className='flex flex-row justify-center space-x-6 align-center my-auto'>
+        <FontAwesomeIcon
+          icon={faExclamationCircle}
+          size="1x"
+          className="text-rose-500"
         />
+        <div className='text-rose-500 flex justify-center'>
+          {str}
+        </div>
       </div>
+    )
+  };
 
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+  return (
+    <div className={libre_franklin.variable}>
+      <div className="grid grid-cols-2 h-screen">
+        <div className="flex items-center justify-center">
+          <AITutorTagline/>
+        </div>
+        <div className="flex items-center justify-center bg-gray-100">
+          <div className="mx-auto max-w-sm bg-white rounded-lg shadow-md p-6 space-y-6"> 
+            {mode === "login" && (<div className="space-y-2 text-center">
+              <h1 className="text-3xl font-bold text-gray-900">Login</h1>
+              <p className="text-gray-500 dark:text-gray-400">Choose your preferred Login method</p>
+            </div>)}
+            {mode === "signup" && (<div className="space-y-2 text-center">
+              <h1 className="text-3xl font-bold text-gray-900">Sign Up</h1>
+              <p className="text-gray-500 dark:text-gray-400">Choose your preferred Sign Up method</p>
+            </div>)}
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <Button variant="outline" onClick={handleGoogleSignIn}>
+                  <ChromeIcon className="h-5 w-5 mr-2" />
+                  Google
+                </Button>
+                <Button variant="outline">
+                  <GithubIcon className="h-5 w-5 mr-2" />
+                  GitHub
+                </Button>
+                <Button variant="outline">
+                  <LinkedinIcon className="h-5 w-5 mr-2" />
+                  LinkedIn
+                </Button>
+              </div>
+            <Separator className="my-8" />
+            {
+              error !== "" && (
+                <DescribeError error = {error}/>
+              )
+            }
+            <form onSubmit={handleEmailSignIn} className="space-y-2">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-900">Email</Label>
+                <Input id="email" placeholder="m@example.com" required type="email" onChange={(event) => setEmail(event.target.value)}/>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-900">Password</Label>
+                <Input id="password" required type="password" onChange={(event) => {setPassword(event.target.value)}}/>
+              </div>
+              {mode === "login" && (<Link className="inline-block w-full text-center text-sm underline text-blue-500" href="#">
+                Forgot your password?
+              </Link>)}
+              {mode === "login" && (<Button className="w-full bg-blue-500 hover:bg-blue-400 text-white" type="submit" onSubmit={handleEmailSignIn}>
+                Login
+              </Button>)}
+              {mode === "signup" && (<Button className="w-full bg-blue-500 hover:bg-blue-400 text-white" type="submit" onSubmit={handleEmailSignUp}>
+                Sign Up
+              </Button>)}
+            </form>
+            {mode === "login" && (<div className='inline-block w-full text-center text-sm '>
+              New here? 
+              <div className='inline underline text-blue-500 px-2' 
+              onClick={() => {
+                setMode("signup");
+                setError("");                
+              }}>
+                Sign Up
+              </div>
+            </div>)}
+            {mode === "signup" && (<div className='inline-block w-full text-center text-sm '>
+              Existing user? 
+              <div className='inline underline text-blue-500 px-2' 
+              onClick={() => {
+                  setMode("login");
+                  setError("");
+              }}>
+                Login
+              </div>
+            </div>)}
+            </div>
+          </div>
+        </div>
       </div>
-    </main>
-  );
+    </div>
+)
+}
+
+function ChromeIcon(props : any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="4" />
+      <line x1="21.17" x2="12" y1="8" y2="8" />
+      <line x1="3.95" x2="8.54" y1="6.06" y2="14" />
+      <line x1="10.88" x2="15.46" y1="21.94" y2="14" />
+    </svg>
+  )
+}
+
+
+function GithubIcon(props : any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+      <path d="M9 18c-4.51 2-5-2-7-2" />
+    </svg>
+  )
+}
+
+
+function LinkedinIcon(props : any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+      <rect width="4" height="12" x="2" y="9" />
+      <circle cx="4" cy="4" r="2" />
+    </svg>
+  )
 }

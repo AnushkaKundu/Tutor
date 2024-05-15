@@ -1,0 +1,7 @@
+img {
+    padding: 10px;
+}
+.inner {
+    overflow:hidden; 
+    max-height:200px
+}
