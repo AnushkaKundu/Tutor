@@ -67,7 +67,7 @@ export function Component() {
   )
 }
 
-function ChromeIcon(props) {
+function ChromeIcon(props: any) {
   return (
     <svg
       {...props}
@@ -91,7 +91,7 @@ function ChromeIcon(props) {
 }
 
 
-function GithubIcon(props) {
+function GithubIcon(props: any) {
   return (
     <svg
       {...props}
@@ -112,7 +112,7 @@ function GithubIcon(props) {
 }
 
 
-function LinkedinIcon(props) {
+function LinkedinIcon(props: any) {
   return (
     <svg
       {...props}
