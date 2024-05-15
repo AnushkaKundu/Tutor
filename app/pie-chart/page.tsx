@@ -1,5 +1,5 @@
 "use client"
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { ChartData } from 'chart.js';
@@ -9,12 +9,14 @@ import AnswerStats from './piestats';
 
 import {ref, get} from 'firebase/database';
 import {database} from '../firebase';
+import { UserAuth } from '../context/AuthContext.mjs';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 
 const PieChart = (props: any) => {
-  const [uid, setUid] = useState("Mxj1jPA1sSNJcozS2oOsmDao3K83");
+  const {user} = UserAuth();
+  const [uid, setUid] = useState("");
   const fullConfig = resolveConfig(tailwindConfig);
   const colors = fullConfig.theme.colors;
 
@@ -22,6 +24,11 @@ const PieChart = (props: any) => {
   const [incorrect, setIncorrect] = useState(0);
   const [skipped, setSkipped] = useState(0);
 
+  useEffect(() => {
+    setUid(user?.uid);
+    console.log(user?.uid);
+  }, [user]);
+  
   const getAnswerStats = async (action: string) => {
     const reference = ref(database, `/answerStats/${uid}/${action}`);
     const snapshot = await get(reference);

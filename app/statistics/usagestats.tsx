@@ -6,6 +6,7 @@ import { Chart, CategoryScale, LinearScale, PointElement, LineElement } from 'ch
 import moment from 'moment';
 Chart.register(CategoryScale, LinearScale, PointElement, LineElement);
 import { database } from './../firebase';
+import { UserAuth } from '../context/AuthContext.mjs';
 
 interface ChartData {
   labels: string[];
@@ -21,20 +22,20 @@ interface ActionData {
   [key: string]: number; // Key can be date ('YYYY-MM-DD') or hour ('HH')
 }
 
-const UserStatisticsChart = (props: { uid: string }) => {
+const UserStatisticsChart = () => {
+  const {user} = UserAuth();
+  const [uid, setUid] = useState("");
   const [chartData, setChartData] = useState({ daily: null, weekly: null } as { daily: ChartData | null; weekly: ChartData | null });
   const [activeChart, setActiveChart] = useState('daily');
 
-  function encode(key: string) {
-    return encodeURIComponent(key).replace(/\.|\#|\$|\[|\]/g, (match) => {
-      return '%' + match.charCodeAt(0).toString(16).toUpperCase();
-    });
-  }
+  useEffect(() => {
+    setUid(user?.uid);
+  }, [user]);
 
   useEffect(() => {
     const fetchData = async () => {
       const fetchActionData = async (action: string, timeRange: 'daily' | 'weekly') => {
-        const statisticsRef = ref(database, `/statistics/${props.uid}/${action}`);
+        const statisticsRef = ref(database, `/statistics/${uid}/${action}`);
         try {
           const snapshot = await get(statisticsRef);
           const data: ActionData = {};
@@ -52,7 +53,7 @@ const UserStatisticsChart = (props: { uid: string }) => {
             });
           } else {
             console.log(
-              `/statistics/${props.uid}/${action}: ${action} snapshot dne.`,
+              `/statistics/${uid}/${action}: ${action} snapshot dne.`,
             );
           }
           console.log(action, data);
@@ -114,7 +115,7 @@ const UserStatisticsChart = (props: { uid: string }) => {
       setChartData({ daily: dailyChartData, weekly: weeklyChartData });
     };
     fetchData();
-  }, [props.uid]);
+  }, [uid]);
 
     if (!chartData.daily || !chartData.weekly) {
         return <div>Loading...</div>;
