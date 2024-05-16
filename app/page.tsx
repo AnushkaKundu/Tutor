@@ -44,8 +44,7 @@ export default function Component() {
       // console.log(error);
     }
   };
-  const handleEmailSignUp = async (e: any) => {
-    e.preventDefault();
+  const handleEmailSignUp = async () => {
     console.log(email, password);
     await emailSignUp(email, password)
     .then(() => console.log(email, password))
@@ -54,6 +53,14 @@ export default function Component() {
       console.log(error);
     });
   }
+  const handleSignUp = async () => {
+    console.log(email, password);
+    try {
+        emailSignUp(email, password)
+    } catch (error: any) {
+        throw new Error(error.message);
+    }        
+}
   const AITutorTagline = () => {
     const [tagline, setTagline] = useState('');
     const fullTagline = 'Elevate Your Learning Experience, Tailored Just for You.';
@@ -86,7 +93,7 @@ export default function Component() {
   };
   
   const DescribeError = (props: any) => {
-    const str = (props.error).replace("Firebase: Error (auth/", "").replace(").", "");
+    const str = (props.error).replace("Firebase: ", "").replace("Error (auth/", "").replace(").", "");
     return (
       <div className='flex flex-row justify-center space-x-6 align-center my-auto'>
         <FontAwesomeIcon
@@ -107,7 +114,7 @@ export default function Component() {
         <div className="flex items-center justify-center">
           <AITutorTagline/>
         </div>
-        <div className="flex items-center justify-center bg-gray-100">
+        <div className="flex items-center justify-center bg-gray-100 px-8">
           <div className="mx-auto max-w-sm bg-white rounded-lg shadow-md p-6 space-y-6"> 
             {mode === "login" && (<div className="space-y-2 text-center">
               <h1 className="text-3xl font-bold text-gray-900">Login</h1>
@@ -118,7 +125,7 @@ export default function Component() {
               <p className="text-gray-500 dark:text-gray-400">Choose your preferred Sign Up method</p>
             </div>)}
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <Button variant="outline" onClick={handleGoogleSignIn}>
                   <ChromeIcon className="h-5 w-5 mr-2" />
                   Google
@@ -127,10 +134,10 @@ export default function Component() {
                   <GithubIcon className="h-5 w-5 mr-2" />
                   GitHub
                 </Button>
-                <Button variant="outline">
+                {/* <Button variant="outline">
                   <LinkedinIcon className="h-5 w-5 mr-2" />
                   LinkedIn
-                </Button>
+                </Button> */}
               </div>
             <Separator className="my-8" />
             {
@@ -150,12 +157,12 @@ export default function Component() {
               {mode === "login" && (<Link className="inline-block w-full text-center text-sm underline text-blue-500" href="#">
                 Forgot your password?
               </Link>)}
-              {mode === "login" && (<Button className="w-full bg-blue-500 hover:bg-blue-400 text-white" type="submit" onSubmit={handleEmailSignIn}>
+              {mode === "login" && (<div className="w-full bg-blue-500 hover:bg-blue-400 text-white text-center py-1 rounded-md" onClick={handleEmailSignIn}>
                 Login
-              </Button>)}
-              {mode === "signup" && (<Button className="w-full bg-blue-500 hover:bg-blue-400 text-white" type="submit" onSubmit={handleEmailSignUp}>
+              </div>)}
+              {mode === "signup" && (<div className="w-full bg-blue-500 hover:bg-blue-400 text-white text-center py-1 rounded-md" onClick={handleEmailSignUp}>
                 Sign Up
-              </Button>)}
+              </div>)}
             </form>
             {mode === "login" && (<div className='inline-block w-full text-center text-sm '>
               New here? 
@@ -230,23 +237,23 @@ function GithubIcon(props : any) {
 }
 
 
-function LinkedinIcon(props : any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-      <rect width="4" height="12" x="2" y="9" />
-      <circle cx="4" cy="4" r="2" />
-    </svg>
-  )
-}
+// function LinkedinIcon(props : any) {
+//   return (
+//     <svg
+//       {...props}
+//       xmlns="http://www.w3.org/2000/svg"
+//       width="24"
+//       height="24"
+//       viewBox="0 0 24 24"
+//       fill="none"
+//       stroke="currentColor"
+//       strokeWidth="2"
+//       strokeLinecap="round"
+//       strokeLinejoin="round"
+//     >
+//       <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+//       <rect width="4" height="12" x="2" y="9" />
+//       <circle cx="4" cy="4" r="2" />
+//     </svg>
+//   )
+// }

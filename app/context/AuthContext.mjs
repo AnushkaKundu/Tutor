@@ -21,6 +21,7 @@ export const AuthContextProvider = ({ children }) => {
       .then((userCredential) => {
         const user = userCredential.user;
         setUser(user);
+        router.push("/dashboard")
       })
       .catch((error) => {
         const errorMessage = error.message;
@@ -33,6 +34,8 @@ export const AuthContextProvider = ({ children }) => {
       .then((userCredential) => {
         const user = userCredential.user;
         setUser(user);
+        router.push("/dashboard")
+        console.log(user);
       })
       .catch((error) => {
         const errorMessage = error.message;
@@ -46,13 +49,17 @@ export const AuthContextProvider = ({ children }) => {
     .then(router.push("/dashboard"))
     .catch((error) => {
       throw new Error(error.message);
-    })
+    });
   };
 
   const githubSignIn = () => {
     const provider = new GithubAuthProvider();
-    signInWithPopup(auth, provider);
-  }
+    signInWithPopup(auth, provider)
+    .then(router.push("/dashboard"))
+    .catch((error) => {
+      throw new Error(error.message);
+    });
+  };
 
   const linkedinSignIn = () => {
     // const provider = new Li
