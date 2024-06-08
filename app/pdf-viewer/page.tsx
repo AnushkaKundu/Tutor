@@ -22,7 +22,6 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 // import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai"; 
 
-// const apiKey = "AIzaSyATL2W9X4coAMv0OpaFgK2_LxzdpygpjZs";
 const apiKey = process.env.NEXT_PUBLIC_GOOGLE_GENERATAIVE_AI_API_KEY || "";
 const generativeAi = new GoogleGenerativeAI(apiKey);
 
