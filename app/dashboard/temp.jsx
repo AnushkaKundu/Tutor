@@ -227,7 +227,7 @@ const UploadForm = ({user}) => {
               </button>
               <Link
                 className="open bg-blue-900 hover:bg-blue-800 text-gray-300 font-semibold py-2 px-4 rounded-lg transition duration-300 ease-in-out border border-blue-800 hover:border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700"
-                href={`/pdf-viewer?fileName=${fileName}`}
+                href={`/pdf-viewer?fileName=${fileName}&uid=${user.uid}`}
               >
                 View PDF <FontAwesomeIcon icon={faEye} />
               </Link>
