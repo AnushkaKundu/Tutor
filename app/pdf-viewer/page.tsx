@@ -370,6 +370,7 @@ export default function PV(props: any) {
 
   const handleSkipQuestion = () => {
     displayQuestion(currentQuestionIndex);
+    setCurrentQuestionIndex(currentQuestionIndex+1);
     handleQueryStats(fileName);
     updateSkippedAnswers();
   };
@@ -477,7 +478,7 @@ export default function PV(props: any) {
   <div>
   <div className="flex flex-row">
     <div className="w-1/2 h-screen">
-      <div className="pdf-container p-4 rounded-lg shadow-md bg-gray-900">
+      <div className="pdf-container m-4 rounded-lg shadow-md bg-gray-900">
         <div className="toolbar flex justify-between items-center mb-4 bg-gray-800 rounded-lg">
           <div className="toolbar-group">
             <button
@@ -546,7 +547,7 @@ export default function PV(props: any) {
     </div>
     <div className="w-1/2 h-screen">
       <div className="flex flex-col h-screen">
-      <div className="bg-gray-800 pb-4">
+      <div className="bg-gray-800 ">
       <div className="container mx-auto text-center bg-gray-900 py-4">
         <div className="text-white mb-4">
           Hi! 👋 How can I help?
@@ -558,7 +559,7 @@ export default function PV(props: any) {
         </div>
       </div>
     </div>
-        <div className="flex-grow p-6 overflow-y-auto bg-gray-800">
+        <div className="flex-grow p-6 overflow-y-auto bg-gray-800 rounded-3xl	m-4">
           {messages.map((message, index) => (
             <div
               key={index}
@@ -605,12 +606,12 @@ export default function PV(props: any) {
             </div>
           ))}
         </div>
-        <div className="p-6 bg-gray-700 border-t border-gray-600">
+        <div className="p-6 bg-gray-700 border-t border-gray-600 rounded-xl mx-4">
           {quizActive && (
             <div className="flex">
               <input
                 type="text"
-                className="w-full p-2 border rounded-md focus:outline-none focus:ring focus:border-blue-600 bg-gray-600 text-white"
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring focus:border-blue-600 bg-gray-600 text-white rounded"
                 placeholder="Enter your answer..."
                 onChange={(e) => {
                   setUserAnswer(e.target.value);
