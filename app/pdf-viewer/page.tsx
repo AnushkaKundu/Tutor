@@ -12,16 +12,27 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faArrowRight, faSearchPlus, faSearchMinus, faUndo, faRedo } from '@fortawesome/free-solid-svg-icons';
+import ReactMarkdown from 'react-markdown';
 
 import './page.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai"; 
 
 const apiKey = "AIzaSyATL2W9X4coAMv0OpaFgK2_LxzdpygpjZs";
 const generativeAi = new GoogleGenerativeAI(apiKey);
+
+const generationConfig = {
+  temperature: 1,
+  topP: 0.95,
+  topK: 64,
+  maxOutputTokens: 8192,
+  responseMimeType: "text/plain",
+};
+ 
 
 interface Question {
   question: string;
@@ -29,10 +40,13 @@ interface Question {
   timestamp: number;
 }
 
+const MarkdownRenderer = (content: any) => {
+  return <ReactMarkdown>{content}</ReactMarkdown>;
+};
 
 export default function PV(props: any) {
   const { user } = UserAuth();
-  const [uid, setUid] = useState("Mxj1jPA1sSNJcozS2oOsmDao3K83");
+  // const [uid, setUid] = useState("Mxj1jPA1sSNJcozS2oOsmDao3K83");
   const [blob, setBlob] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,7 +55,8 @@ export default function PV(props: any) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fileName = searchParams.get('fileName');
-  
+  const uid = searchParams.get('uid');
+
   useEffect(() => {
     async function getData() {
       setLoading(true);
@@ -148,24 +163,33 @@ export default function PV(props: any) {
             console.log('Selected text:', selectedText);
         }
     };
-    const [text, setText] = useState('');
-  const [summary, setSummary] = useState('');
+  
+  const [text, setText] = useState("In a quiet village nestled between rolling hills and whispering forests, there lived a young woman named Elara. She was known far and wide for her enchanting voice, a gift that seemed to carry the very essence of the land's ancient magic. Elara sang at every village gathering, her melodies weaving dreams and memories into the hearts of those who listened.\n\nOne crisp autumn evening, as the leaves danced in the golden light of the setting sun, Elara heard a faint, haunting melody drifting through the air. It was a tune she had never heard before, yet it felt strangely familiar, like a forgotten dream. Intrigued, she followed the sound, her heart beating in rhythm with the mysterious music.\n\nThe melody led her deep into the forest, to a hidden glade bathed in moonlight. In the center of the glade stood an old, twisted tree with silver leaves that shimmered in the soft glow. At the base of the tree sat an old man playing a lyre, his fingers moving with a grace that belied his age.\n\n\"Who are you?\" Elara asked, her voice trembling with both fear and curiosity.\n\nThe old man looked up, his eyes twinkling like stars.");
   const [quizActive, setQuizActive] = useState(false);
   const [messages, setMessages] = useState<{ role: string; content: string, type: string }[]>([]);
   const [userAnswer, setUserAnswer] = useState("");
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [generatedQuestions, setGeneratedQuestions] = useState<String[]>([]);
+  const [numOfGeneratedQuestions, setNumOfGeneratedQuestions] = useState(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const model = generativeAi.getGenerativeModel({ model: 'gemini-pro' });
-
+  
   const summarizeText = async () => {
     try {
-      const prompt = `Please provide a concise bullet point summary of the following text:\n\n${text}`;
-      const response = model.generateContent(prompt);
-      const summaryText = (await response).response.text();
-      setSummary(summaryText);
+      const summaryModel = generativeAi.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        systemInstruction: "You are an AI teaching assistant. Break into points whatever is inputted by user so that it becomes easy to understand. Return as markdown.",
+      });
+      const chatSession = summaryModel.startChat({
+        generationConfig
+      });
+      const result = await chatSession.sendMessage(text);
+      const summaryText = result.response.text();
       setMessages((prevMessages) => [
         ...prevMessages,
         { 
             role: 'user', 
-            content: text,
+            content: "Summarize",
             type: 'text'
         },
         { 
@@ -194,6 +218,8 @@ export default function PV(props: any) {
     handleQueryStats(fileName);
     setUserAnswer("");
   };
+
+
   const generateQuestion = async () => {
     try {
       const prompt = `Generate a single concise objective question based on this text:\n\n${text}. Just return one question in one line nothing else. Make sure the question is randomly from any part of the text.`;
@@ -222,11 +248,58 @@ export default function PV(props: any) {
     handleQueryStats(fileName);
   };
 
-  const handleStartQuiz = () => {
-    setQuizActive(true);
-    generateQuestion();
-    handleQueryStats(fileName);
-  };
+  function extractUsefulStrings(inputString: String) {
+    const openingBracketIndex = inputString.indexOf("[");
+    const closingBracketIndex = inputString.indexOf("]");
+    if (openingBracketIndex === -1 || closingBracketIndex === -1) {
+      return [];
+    }
+    const bracketContent = inputString.substring(openingBracketIndex + 1, closingBracketIndex);
+    const usefulStrings = bracketContent.split(",");
+    return usefulStrings.map(str => str.trim());
+  }
+
+  const generateQuestions = async () => {
+    try {
+      const questionsModel = generativeAi.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        systemInstruction: "You are an AI teaching assistant. Strictly return a list of questions that cover the entire text inputted by user. Return a list format in javascript dont use markdown.",
+      });
+      const chatSession = questionsModel.startChat({
+        generationConfig
+      });
+
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          role: 'user',
+          content: 'Test my understanding',
+          type: 'text'
+        },
+      ]);
+      setQuizActive(true);
+      const t = "In a quiet village nestled between rolling hills and whispering forests, there lived a young woman named Elara. She was known far and wide for her enchanting voice, a gift that seemed to carry the very essence of the land's ancient magic. Elara sang at every village gathering, her melodies weaving dreams and memories into the hearts of those who listened.\n\nOne crisp autumn evening, as the leaves danced in the golden light of the setting sun, Elara heard a faint, haunting melody drifting through the air. It was a tune she had never heard before, yet it felt strangely familiar, like a forgotten dream. Intrigued, she followed the sound, her heart beating in rhythm with the mysterious music.\n\nThe melody led her deep into the forest, to a hidden glade bathed in moonlight. In the center of the glade stood an old, twisted tree with silver leaves that shimmered in the soft glow. At the base of the tree sat an old man playing a lyre, his fingers moving with a grace that belied his age.\n\n\"Who are you?\" Elara asked, her voice trembling with both fear and curiosity.\n\nThe old man looked up, his eyes twinkling like stars.";
+      const result = await chatSession.sendMessage(t);
+      const questionsText = result.response.text();
+      const questionsList = extractUsefulStrings(questionsText);
+      console.log(questionsList);
+      setGeneratedQuestions(questionsList);
+      setNumOfGeneratedQuestions(questionsList.length);
+      setCurrentQuestionIndex(0);
+      displayQuestion();
+    } catch (e) {
+      console.error('Error generating questions:', error);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          role: 'assistant',
+          content: 'An error occurred while generating the questions. Try again.',
+          type: 'error'
+        },
+      ]);
+    }
+  }
+
 
   const handleStopQuiz = () => {
     setQuizActive(false);
@@ -241,16 +314,44 @@ export default function PV(props: any) {
     setText("");
     handleQueryStats(fileName);
   };
+  const displayQuestion = async () => {
+    if (numOfGeneratedQuestions <= currentQuestionIndex) {
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          role: 'assistant',
+          content: 'Great work! That the end of all questions.',
+          type: 'notification',
+        },
+      ]);
+      return;
+    }
+    const question = generatedQuestions[currentQuestionIndex];
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        role: 'assistant',
+        content: question.toString(),
+        type: 'question'
+      },
+    ]);
+  }
 
   const handleSubmitAnswer = async (userAnswer: string) => {
-    const lastQuestion = messages[messages.length - 1].content;
-    try {
-      const prompt = `Considering the text:\n\n${text}\n\nIs the following answer correct for the question:\n\n${lastQuestion}\n\nAnswer: ${userAnswer}. Return a json in string format, with 2 keys, the first key will be isCorrect and the value should be 1 if it is correct 0 otherwise. The second key should be your feedback.`;
-      const response = model.generateContent(prompt);
-      const feedback = (await response).response.text().replace(/`/g, '').replace("json", "");
-      const jsonObject = JSON.parse(feedback);
+    const feedbackModel = generativeAi.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        systemInstruction: `You are an AI answer evaluating assistant. In context of a peice of text evaluate the answer to the question. Question and answer will be provided by user. Return a json in string format, with 2 keys, the first key will be isCorrect and the value should be 1 if it is correct 0 otherwise. The second key should be your feedback. Don't use markdown. \ntext: ${text}`
+      });
+      const chatSession2 = feedbackModel.startChat({
+        generationConfig
+      });
+      const prompt = `question: ${generatedQuestions[currentQuestionIndex]} \nanswer: ${userAnswer}`;
+      const response = await chatSession2.sendMessage(prompt);
+      const answer = response.response.text();
+      const jsonObject = JSON.parse(answer);
+      console.log(jsonObject);
       const fb = (jsonObject.isCorrect === 1 ? "Correct, ": "Incorrect, ") + jsonObject.feedback;
-      console.log(feedback);
+      await new Promise(resolve => setTimeout(resolve, 2000));
       setMessages((prevMessages) => [
         ...prevMessages,
         { role: 'user', content: userAnswer, type: 'answer' },
@@ -261,21 +362,14 @@ export default function PV(props: any) {
       } else {
         updateIncorrectAnswers();
       }
-    } catch (error) {
-      console.error('Error evaluating answer:', error);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { role: 'user', content: userAnswer, type: 'answer' },
-        { role: 'assistant', content: 'Error evaluating answer', type: 'error' },
-      ]);
-    }
+    setCurrentQuestionIndex(currentQuestionIndex + 1);
+    displayQuestion();
     setUserAnswer("");
-    generateQuestion();  
     handleQueryStats(fileName);
   };
 
   const handleSkipQuestion = () => {
-    generateQuestion();
+    displayQuestion();
     handleQueryStats(fileName);
     updateSkippedAnswers();
   };
@@ -287,11 +381,7 @@ export default function PV(props: any) {
   }
 
   const handleSaveQuestion = () => {
-    // console.log("Question saved");
-    // const uid = user?.uid;
-    // const fileName = searchParams.get('fileName');
-    // const pgno = pageNumber;
-    const lastQuestion = messages[messages.length - 1];
+    const lastQuestion = messages[currentQuestionIndex];
     if (lastQuestion.type !== 'question') {
       return;
     }
@@ -319,7 +409,6 @@ export default function PV(props: any) {
     updateSkippedAnswers();
   };
 
-  const [questions, setQuestions] = useState<Question[]>([]);
   const getPageQuestions = () => {
     setQuestions([]);
     const questionsRef = dbref(database, `/questions/${uid}/${encode(fileName as string)}/${pageNumber}`);
@@ -382,187 +471,10 @@ export default function PV(props: any) {
       set(skippedRef, 1);
     }
   }
+
+  console.log(questions);
   return (
-    // <div>
-    // <div className='flex flex-row'>
-    //   <div style={{ width: '50%', height: '100vh' }}>
-    //     <div className="pdf-container p-4 rounded-lg shadow-md">
-    //       <div className="toolbar flex justify-between items-center mb-4 bg-pink-200">
-    //         <div className="toolbar-group">
-    //             <button onClick={handlePreviousPage} disabled={pageNumber === 1} className="toolbar-btn left p-2 rounded-md bg-pink-200 hover:bg-pink-300 text-pink-700 transition duration-300 mr-2">
-    //                 <FontAwesomeIcon icon={faArrowLeft} />
-    //             </button>
-    //             <button onClick={handleNextPage} disabled={pageNumber === numPages} className="toolbar-btn left p-2 rounded-md bg-pink-200 hover:bg-pink-300 text-pink-700 transition duration-300 mr-2">
-    //                 <FontAwesomeIcon icon={faArrowRight} />
-    //             </button>
-    //         </div>
-    //         <div className="toolbar-group">
-    //             <button onClick={handleMagnify} className="toolbar-btn center p-2 rounded-md bg-pink-200 hover:bg-pink-300 text-pink-700 transition duration-300 mr-2">
-    //                 <FontAwesomeIcon icon={faSearchPlus} />
-    //             </button>
-    //             <button onClick={handleMinify} className="toolbar-btn center p-2 rounded-md bg-pink-200 hover:bg-pink-300 text-pink-700 transition duration-300 mr-2">
-    //                 <FontAwesomeIcon icon={faSearchMinus} />
-    //             </button>
-    //         </div>
-    //         <div className="toolbar-group">
-    //             <button onClick={handleRotateLeft} className="toolbar-btn right p-2 rounded-md bg-pink-200 hover:bg-pink-300 text-pink-700 transition duration-300 mr-2">
-    //                 <FontAwesomeIcon icon={faUndo} />
-    //             </button>
-    //             <button onClick={handleRotateRight} className="toolbar-btn right p-2 rounded-md bg-pink-200 hover:bg-pink-300 text-pink-700 transition duration-300 mr-2">
-    //                 <FontAwesomeIcon icon={faRedo} />
-    //             </button>
-    //         </div>
-    //       </div>
-    //       <div className="pdf-viewer" ref={pdfViewerRef} style={{  overflowX: 'auto', overflowY: 'auto', height: pageHeight,  maxHeight: 'calc(100vh - 100px)' }} onMouseUp={handleTextSelection}>
-    //           <Document file={blob as File} onLoadSuccess={onDocumentLoadSuccess}>
-    //               <Page pageNumber={pageNumber} scale={pageScale} rotate={rotation} renderTextLayer={true} />
-    //           </Document>
-    //       </div>
-    //     </div>
-    // </div>
-    // <div style={{ width: '50%', height: '100vh' }}>
-    // <div className="flex flex-col h-screen">
-    //   <div className="flex-grow p-6 overflow-y-auto">
-    //     {messages.map((message, index) => (
-    //       <div
-    //         key={index}
-    //         className={`flex flex-col ${
-    //           message.role === 'user' ? 'items-end' : 'items-start'
-    //         } mb-4`}
-    //       >
-    //         <div
-    //           className={`${
-    //             message.role === 'user'
-    //               ? 'bg-blue-400 text-white'
-    //               : message.type === 'question'
-    //               ? 'bg-pink-300'
-    //               : message.type === 'summary'
-    //               ? 'bg-pink-200'
-    //               : message.type === 'feedback'
-    //               ? 'bg-pink-400'
-    //               : 'bg-pink-500'
-    //           } p-3 rounded-lg`}
-    //         >
-    //           {message.content}
-    //         </div>
-    //         {message.role === 'assistant' &&
-    //           quizActive &&
-    //           message.type === 'question' &&
-    //           index === messages.length - 1 && ( 
-    //             <div className="mt-2 flex space-x-2">
-    //               <button
-    //                 onClick={handleSkipQuestion}
-    //                 className="px-3 py-1 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring focus:border-pink-700"
-    //               >
-    //                 Skip 
-    //               </button>
-    //               <button
-    //                 onClick={handleSaveQuestion}
-    //                 className="px-3 py-1 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring focus:border-pink-800"
-    //               >
-    //                 Skip & Save 
-    //               </button>
-    //               <button
-    //                 onClick={handleStopQuiz}
-    //                 className="px-3 py-1 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring focus:border-pink-800"
-    //               >
-    //                 Stop quiz
-    //               </button>
-    //             </div>
-    //         )}
-    //         {message.role === 'assistant' &&
-    //           !quizActive &&
-    //           message.type === 'summary' &&
-    //           (
-    //             <div className="mt-2 flex space-x-2">
-    //                 <button
-    //                     onClick={handleStartQuiz}
-    //                     className="px-3 py-1 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring focus:border-pink-800"
-    //                     >
-    //                         Test Your Understanding
-    //                 </button>
-    //             </div>                
-    //           )}
-    //       </div>
-    //     ))}
-    //   </div>
-    //   <div className="p-6 bg-pink-200 border-t border-pink-400">
-    //     {quizActive ? (
-    //       <div className='flex'>
-    //         <input
-    //           type="text"
-    //           className="w-full p-2 border rounded-md focus:outline-none focus:ring focus:border-blue-600 bg-pink-50 text-blue-900"
-    //           placeholder="Enter your answer..."
-    //           onChange={(e) => setUserAnswer(e.target.value)}
-    //           value={userAnswer} // Bind input value to userAnswer state
-    //         />
-    //         <button
-    //             onClick={() => handleSubmitAnswer(userAnswer)} 
-    //             className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring focus:border-blue-700 ml-2">
-    //             Submit
-    //         </button>
-    //       </div>
-    //     ) : (
-    //         <div className='flex'>
-    //             <textarea
-    //             value={text}
-    //             onChange={(e) => setText(e.target.value)}
-    //             placeholder="Enter your text here..."
-    //             rows={5}
-    //             className="w-full p-2 border rounded-md resize-none focus:outline-none focus:ring focus:border-blue-600 bg-pink-50 text-blue-900"
-    //             />
-    //             <button
-    //                 onClick={summarizeText} 
-    //                 className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring focus:border-blue-700 ml-2">
-    //                 Submit
-    //             </button>
-    //         </div>
-    //     )}
-    //   </div>
-    // </div>
-    // </div>
-    // </div>
-    // <div className="px-8 py-6 my-4 rounded-lg bg-pink-100 shadow-md">
-    //   <h2 className="text-2xl font-semibold mb-4 text-pink-700 text-center">Saved Questions</h2>
-    //   <div className="w-4/5 mx-auto"> {/* 80% width */}
-    //     {questions.map((item) => (
-    //       <div
-    //         className="border-b border-pink-400"
-    //         key={item.timestamp}
-    //       >
-    //         <button
-    //           className="flex items-center justify-between w-full p-4 focus:outline-none hover:bg-pink-200"
-    //           onClick={() => toggleAccordion(item.timestamp)}
-    //         >
-    //           <span className="text-lg text-pink-800">{item.question}</span>
-    //           <svg
-    //             className={`w-4 h-4 transform transition-transform duration-300 ${
-    //               openId === item.timestamp ? 'rotate-90' : ''
-    //             }`}
-    //             xmlns="http://www.w3.org/2000/svg"
-    //             viewBox="0 0 20 20"
-    //             fill="currentColor"
-    //           >
-    //             <path
-    //               fillRule="evenodd"
-    //               d="M6.293 7.293a1 1 0 0 1 1.414 1.414l-3 3a1 1 0 1 1-1.414-1.414l3-3zm6 0a1 1 0 1 1 1.414 1.414l-3 3a1 1 0 0 1-1.414-1.414l3-3z"
-    //               clipRule="evenodd"
-    //             />
-    //           </svg>
-    //         </button>
-    //         <div
-    //           className={`overflow-hidden transition-height ease duration-300 ${
-    //             openId === item.timestamp ? 'h-auto' : 'h-0'
-    //           }`}
-    //         >
-    //           <div className="p-4 text-pink-700">{item.text}</div>
-    //         </div>
-    //       </div>
-    //     ))}
-    //   </div>
-    // </div>
-    // </div>
-    <div>
+  <div>
   <div className="flex flex-row">
     <div className="w-1/2 h-screen">
       <div className="pdf-container p-4 rounded-lg shadow-md bg-gray-900">
@@ -575,6 +487,9 @@ export default function PV(props: any) {
             >
               <FontAwesomeIcon icon={faArrowLeft} />
             </button>
+            <div className='toolbar-btn left bg-gray-700 hover:bg-gray-600 text-white transition duration-300 mr-2'>
+             {pageNumber}
+            </div>
             <button
               onClick={handleNextPage}
               disabled={pageNumber === numPages}
@@ -631,6 +546,18 @@ export default function PV(props: any) {
     </div>
     <div className="w-1/2 h-screen">
       <div className="flex flex-col h-screen">
+      <div className="bg-gray-800 pb-4">
+      <div className="container mx-auto text-center bg-gray-900 py-4">
+        <div className="text-white mb-4">
+          Hi! 👋 How can I help?
+        </div>
+        <div className="flex justify-center space-x-4">
+          <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onClick={summarizeText}>Summarise</button>
+          <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onClick={generateQuestions}>Test your understanding</button>
+          <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Review saved questions</button>
+        </div>
+      </div>
+    </div>
         <div className="flex-grow p-6 overflow-y-auto bg-gray-800">
           {messages.map((message, index) => (
             <div
@@ -643,16 +570,12 @@ export default function PV(props: any) {
                 className={`${
                   message.role === 'user'
                     ? 'bg-blue-700 text-white'
-                    : message.type === 'question'
-                    ? 'bg-gray-700 text-white'
-                    : message.type === 'summary'
-                    ? 'bg-gray-600 text-white'
-                    : message.type === 'feedback'
-                    ? 'bg-blue-900 text-white'
-                    : 'bg-gray-500 text-white'
+                    : 'bg-gray-700 text-white'
                 } p-3 rounded-lg`}
               >
-                {message.content}
+                <ReactMarkdown>
+                  {message.content}
+                </ReactMarkdown>
               </div>
               {message.role === 'assistant' &&
                 quizActive &&
@@ -679,49 +602,25 @@ export default function PV(props: any) {
                     </button>
                   </div>
                 )}
-              {message.role === 'assistant' &&
-                !quizActive &&
-                message.type === 'summary' && (
-                  <div className="mt-2 flex space-x-2">
-                    <button
-                      onClick={handleStartQuiz}
-                      className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring focus:border-blue-800"
-                    >
-                      Test Your Understanding
-                    </button>
-                  </div>
-                )}
             </div>
           ))}
         </div>
         <div className="p-6 bg-gray-700 border-t border-gray-600">
-          {quizActive ? (
+          {quizActive && (
             <div className="flex">
               <input
                 type="text"
                 className="w-full p-2 border rounded-md focus:outline-none focus:ring focus:border-blue-600 bg-gray-600 text-white"
                 placeholder="Enter your answer..."
-                onChange={(e) => setUserAnswer(e.target.value)}
+                onChange={(e) => {
+                  setUserAnswer(e.target.value);
+                }}
                 value={userAnswer}
               />
               <button
-                onClick={() => handleSubmitAnswer(userAnswer)}
-                className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring focus:border-blue-700 ml-2"
-              >
-                Submit
-              </button>
-            </div>
-          ) : (
-            <div className="flex">
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Enter your text here..."
-                rows={5}
-                className="w-full p-2 border rounded-md resize-none focus:outline-none focus:ring focus:border-blue-600 bg-gray-600 text-white"
-              />
-              <button
-                onClick={summarizeText}
+                onClick={() => {
+                  handleSubmitAnswer(userAnswer);
+                }}
                 className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring focus:border-blue-700 ml-2"
               >
                 Submit
@@ -733,46 +632,57 @@ export default function PV(props: any) {
     </div>
   </div>
   <div className="px-8 py-6 my-4 rounded-lg bg-gray-900 shadow-md">
-    <h2 className="text-2xl font-semibold mb-4 text-white text-center">
-      Saved Questions
-    </h2>
-    <div className="w-4/5 mx-auto">
-      {questions.map((item) => (
-        <div
-          className="border-b border-gray-700"
-          key={item.timestamp}
-        >
-          <button
-            className="flex items-center justify-between w-full p-4 focus:outline-none hover:bg-gray-800"
-            onClick={() => toggleAccordion(item.timestamp)}
-          >
-            <span className="text-lg text-white">{item.question}</span>
-            <svg
-              className={`w-4 h-4 transform transition-transform duration-300 ${
-                openId === item.timestamp ? 'rotate-90' : ''
-              }`}
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
+    {
+      !questions.length && (
+        <h2 className="text-2xl font-semibold mb-4 text-white text-center">
+          Your saved questions will appear here
+        </h2>
+      )
+    }
+    {questions.length && (
+      <div>
+        <h2 className="text-2xl font-semibold mb-4 text-white text-center">
+          Saved Questions
+        </h2>
+        <div className="w-4/5 mx-auto">
+          {questions.map((item) => (
+            <div
+              className="border-b border-gray-700"
+              key={item.timestamp}
             >
-              <path
-                fillRule="evenodd"
-                d="M6.293 7.293a1 1 0 0 1 1.414 1.414l-3 3a1 1 0 1 1-1.414-1.414l3-3zm6 0a1 1 0 1 1 1.414 1.414l-3 3a1 1 0 0 1-1.414-1.414l3-3z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-          <div
-            className={`overflow-hidden transition-height ease duration-300 ${
-              openId === item.timestamp ? 'h-auto' : 'h-0'
-            }`}
-          >
-            <div className="p-4 text-gray-300">{item.text}</div>
-          </div>
+              <button
+                className="flex items-center justify-between w-full p-4 focus:outline-none hover:bg-gray-800"
+                onClick={() => toggleAccordion(item.timestamp)}
+              >
+                <span className="text-lg text-white">{item.question}</span>
+                <svg
+                  className={`w-4 h-4 transform transition-transform duration-300 ${
+                    openId === item.timestamp ? 'rotate-90' : ''
+                  }`}
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M6.293 7.293a1 1 0 0 1 1.414 1.414l-3 3a1 1 0 1 1-1.414-1.414l3-3zm6 0a1 1 0 1 1 1.414 1.414l-3 3a1 1 0 0 1-1.414-1.414l3-3z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+              <div
+                className={`overflow-hidden transition-height ease duration-300 ${
+                  openId === item.timestamp ? 'h-auto' : 'h-0'
+                }`}
+              >
+                <div className="p-4 text-gray-300">{item.text}</div>
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-</div>
   );
 }
