@@ -286,7 +286,7 @@ export default function PV(props: any) {
       setGeneratedQuestions(questionsList);
       setNumOfGeneratedQuestions(questionsList.length);
       setCurrentQuestionIndex(0);
-      displayQuestion();
+      displayQuestion(0);
     } catch (e) {
       console.error('Error generating questions:', error);
       setMessages((prevMessages) => [
@@ -314,7 +314,7 @@ export default function PV(props: any) {
     setText("");
     handleQueryStats(fileName);
   };
-  const displayQuestion = async () => {
+  const displayQuestion = async (currentQuestionIndex: number) => {
     if (numOfGeneratedQuestions <= currentQuestionIndex) {
       setMessages((prevMessages) => [
         ...prevMessages,
@@ -362,14 +362,14 @@ export default function PV(props: any) {
       } else {
         updateIncorrectAnswers();
       }
+    displayQuestion(currentQuestionIndex + 1);
     setCurrentQuestionIndex(currentQuestionIndex + 1);
-    displayQuestion();
     setUserAnswer("");
     handleQueryStats(fileName);
   };
 
   const handleSkipQuestion = () => {
-    displayQuestion();
+    displayQuestion(currentQuestionIndex);
     handleQueryStats(fileName);
     updateSkippedAnswers();
   };
