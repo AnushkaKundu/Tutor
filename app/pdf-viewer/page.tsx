@@ -370,10 +370,7 @@ export default function PV(props: any) {
 
   const handleSkipQuestion = () => {
     displayQuestion(currentQuestionIndex);
-<<<<<<< HEAD
-=======
     setCurrentQuestionIndex(currentQuestionIndex+1);
->>>>>>> c7989cb9701ebb51d5df050c1fd5105a9c0ce639
     handleQueryStats(fileName);
     updateSkippedAnswers();
   };
@@ -550,11 +547,7 @@ export default function PV(props: any) {
     </div>
     <div className="w-1/2 h-screen">
       <div className="flex flex-col h-screen">
-<<<<<<< HEAD
-      <div className="bg-gray-800 pb-4">
-=======
       <div className="bg-gray-800 ">
->>>>>>> c7989cb9701ebb51d5df050c1fd5105a9c0ce639
       <div className="container mx-auto text-center bg-gray-900 py-4">
         <div className="text-white mb-4">
           Hi! 👋 How can I help?
@@ -566,11 +559,7 @@ export default function PV(props: any) {
         </div>
       </div>
     </div>
-<<<<<<< HEAD
-        <div className="flex-grow p-6 overflow-y-auto bg-gray-800">
-=======
         <div className="flex-grow p-6 overflow-y-auto bg-gray-800 rounded-3xl	m-4">
->>>>>>> c7989cb9701ebb51d5df050c1fd5105a9c0ce639
           {messages.map((message, index) => (
             <div
               key={index}
@@ -617,11 +606,7 @@ export default function PV(props: any) {
             </div>
           ))}
         </div>
-<<<<<<< HEAD
-        <div className="p-6 bg-gray-700 border-t border-gray-600">
-=======
         <div className="p-6 bg-gray-700 border-t border-gray-600 rounded-xl mx-4">
->>>>>>> c7989cb9701ebb51d5df050c1fd5105a9c0ce639
           {quizActive && (
             <div className="flex">
               <input
