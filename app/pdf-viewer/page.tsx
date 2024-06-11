@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { ref as dbref, push, set, get, serverTimestamp, onValue } from 'firebase/database';
 import { useSearchParams, usePathname } from 'next/navigation';
@@ -13,6 +13,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faArrowRight, faSearchPlus, faSearchMinus, faUndo, faRedo } from '@fortawesome/free-solid-svg-icons';
 import ReactMarkdown from 'react-markdown';
+import parse, { domToReact, Element } from 'html-react-parser';
 
 import './page.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
@@ -40,9 +41,6 @@ interface Question {
   timestamp: number;
 }
 
-const MarkdownRenderer = (content: any) => {
-  return <ReactMarkdown>{content}</ReactMarkdown>;
-};
 
 export default function PV(props: any) {
   const { user } = UserAuth();
@@ -99,7 +97,25 @@ export default function PV(props: any) {
     const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
         setNumPages(numPages);
         setPdfLoaded(true);
+        // loadPageText(pageNumber);
     };
+
+    // const onPageLoadSuccess = (page: any) => {
+    //   console.log(page);
+    //   page.getTextContent().then((textContent: any) => { 
+    //     const textItems: any[] = textContent.items; 
+    //     const extractedText: string = textItems.map((item: any) => item.str).join(' ');
+    //     setText(extractedText);
+    //   });
+    //   console.log(text);
+    // };
+    const onPageLoadSuccess = useCallback((page: any) => {
+      page.getTextContent().then((textContent: any) => {
+          const textItems = textContent.items;
+          const extractedText = textItems.map((item: any) => item.str).join(' ');
+          setText(extractedText);
+      });
+  }, [pageNumber]);
 
     const handlePreviousPage = () => {
         if (pageNumber > 1) {
@@ -144,7 +160,7 @@ export default function PV(props: any) {
             }
         }
     };
-
+    
     useEffect(() => {
         window.addEventListener('resize', handleResize);
         return () => {
@@ -164,7 +180,8 @@ export default function PV(props: any) {
         }
     };
   
-  const [text, setText] = useState("In a quiet village nestled between rolling hills and whispering forests, there lived a young woman named Elara. She was known far and wide for her enchanting voice, a gift that seemed to carry the very essence of the land's ancient magic. Elara sang at every village gathering, her melodies weaving dreams and memories into the hearts of those who listened.\n\nOne crisp autumn evening, as the leaves danced in the golden light of the setting sun, Elara heard a faint, haunting melody drifting through the air. It was a tune she had never heard before, yet it felt strangely familiar, like a forgotten dream. Intrigued, she followed the sound, her heart beating in rhythm with the mysterious music.\n\nThe melody led her deep into the forest, to a hidden glade bathed in moonlight. In the center of the glade stood an old, twisted tree with silver leaves that shimmered in the soft glow. At the base of the tree sat an old man playing a lyre, his fingers moving with a grace that belied his age.\n\n\"Who are you?\" Elara asked, her voice trembling with both fear and curiosity.\n\nThe old man looked up, his eyes twinkling like stars.");
+  
+  const [text, setText] = useState("");
   const [quizActive, setQuizActive] = useState(false);
   const [messages, setMessages] = useState<{ role: string; content: string, type: string }[]>([]);
   const [userAnswer, setUserAnswer] = useState("");
@@ -199,7 +216,6 @@ export default function PV(props: any) {
         },
       ]);
     } catch (error) {
-      console.error('Error summarizing text:', error);
       setMessages((prevMessages) => [
         ...prevMessages,
         { 
@@ -217,35 +233,6 @@ export default function PV(props: any) {
     // console.log(messages);
     handleQueryStats(fileName);
     setUserAnswer("");
-  };
-
-
-  const generateQuestion = async () => {
-    try {
-      const prompt = `Generate a single concise objective question based on this text:\n\n${text}. Just return one question in one line nothing else. Make sure the question is randomly from any part of the text.`;
-      const response = model.generateContent(prompt);
-      const questionText = (await response).response.text();
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { 
-            role: 'assistant', 
-            content: questionText ,
-            type: 'question'
-        },
-      ]);
-    } catch (error) {
-      console.error('Error generating question:', error);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        {
-          role: 'assistant',
-          content: 'An error occurred while generating the question.',
-          type: 'error'
-        },
-      ]);
-    }
-    console.log(messages);
-    handleQueryStats(fileName);
   };
 
   function extractUsefulStrings(inputString: String) {
@@ -278,17 +265,17 @@ export default function PV(props: any) {
         },
       ]);
       setQuizActive(true);
-      const t = "In a quiet village nestled between rolling hills and whispering forests, there lived a young woman named Elara. She was known far and wide for her enchanting voice, a gift that seemed to carry the very essence of the land's ancient magic. Elara sang at every village gathering, her melodies weaving dreams and memories into the hearts of those who listened.\n\nOne crisp autumn evening, as the leaves danced in the golden light of the setting sun, Elara heard a faint, haunting melody drifting through the air. It was a tune she had never heard before, yet it felt strangely familiar, like a forgotten dream. Intrigued, she followed the sound, her heart beating in rhythm with the mysterious music.\n\nThe melody led her deep into the forest, to a hidden glade bathed in moonlight. In the center of the glade stood an old, twisted tree with silver leaves that shimmered in the soft glow. At the base of the tree sat an old man playing a lyre, his fingers moving with a grace that belied his age.\n\n\"Who are you?\" Elara asked, her voice trembling with both fear and curiosity.\n\nThe old man looked up, his eyes twinkling like stars.";
-      const result = await chatSession.sendMessage(t);
+      const result = await chatSession.sendMessage(text);
       const questionsText = result.response.text();
       const questionsList = extractUsefulStrings(questionsText);
-      console.log(questionsList);
+      if (questionsList.length === 0) {
+        throw new Error();
+      }
       setGeneratedQuestions(questionsList);
       setNumOfGeneratedQuestions(questionsList.length);
       setCurrentQuestionIndex(0);
       displayQuestion(0);
     } catch (e) {
-      console.error('Error generating questions:', error);
       setMessages((prevMessages) => [
         ...prevMessages,
         {
@@ -406,7 +393,7 @@ export default function PV(props: any) {
     .catch((error) => console.error('Error saving question:', error)); 
     handleQueryStats(fileName);
     getPageQuestions();
-    generateQuestion();
+    displayQuestion(currentQuestionIndex + 1);
     updateSkippedAnswers();
   };
 
@@ -429,6 +416,7 @@ export default function PV(props: any) {
 
   useEffect (() => {
     getPageQuestions();
+    // onPageLoadSuccess();
   },[pageNumber, uid]);
 
   const [openId, setOpenId] = useState(null);
@@ -473,7 +461,7 @@ export default function PV(props: any) {
     }
   }
 
-  console.log(questions);
+  // console.log(questions);
   return (
   <div>
   <div className="flex flex-row">
@@ -540,6 +528,7 @@ export default function PV(props: any) {
               scale={pageScale}
               rotate={rotation}
               renderTextLayer={true}
+              onLoadSuccess={onPageLoadSuccess}
             />
           </Document>
         </div>
@@ -555,7 +544,6 @@ export default function PV(props: any) {
         <div className="flex justify-center space-x-4">
           <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onClick={summarizeText}>Summarise</button>
           <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onClick={generateQuestions}>Test your understanding</button>
-          <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Review saved questions</button>
         </div>
       </div>
     </div>
